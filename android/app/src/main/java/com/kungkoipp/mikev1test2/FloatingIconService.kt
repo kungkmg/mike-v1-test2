@@ -1,14 +1,12 @@
 package com.kungkoipp.mikev1test2
 
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
 import android.view.*
 import android.widget.ImageView
-import androidx.core.content.ContextCompat
 
 class FloatingIconService : Service() {
 
@@ -26,17 +24,17 @@ class FloatingIconService : Service() {
     private var windowManager: WindowManager? = null
     private var floatView: View? = null
 
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> showFloat()
             ACTION_STOP  -> { removeFloat(); stopSelf() }
         }
         return START_STICKY
-    }
-
-    override fun onCreate() {
-        super.onCreate()
-        instance = this
     }
 
     override fun onDestroy() {
@@ -47,7 +45,6 @@ class FloatingIconService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    // ── สร้าง floating icon ────────────────────────────────────────────────────
     private fun showFloat() {
         if (floatView != null) return
 
@@ -77,25 +74,31 @@ class FloatingIconService : Service() {
             setPadding(dpToPx(6), dpToPx(6), dpToPx(6), dpToPx(6))
             alpha = 0.92f
 
-            // กดแล้วเปิดแอปกลับมา
             setOnClickListener {
-                val open = Intent(context, MainActivity::class.java).apply {
+                val open = Intent(this@FloatingIconService, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 }
                 startActivity(open)
             }
 
-            // ลาก icon ได้
-            var lastX = 0f; var lastY = 0f; var isDragging = false
-            setOnTouchListener { v, event ->
+            var lastX = 0f
+            var lastY = 0f
+            var isDragging = false
+
+            setOnTouchListener { _, event ->
                 when (event.action) {
-                    MotionEvent.ACTION_DOWN -> { lastX = event.rawX; lastY = event.rawY; isDragging = false; false }
+                    MotionEvent.ACTION_DOWN -> {
+                        lastX = event.rawX; lastY = event.rawY; isDragging = false; false
+                    }
                     MotionEvent.ACTION_MOVE -> {
-                        val dx = event.rawX - lastX; val dy = event.rawY - lastY
+                        val dx = event.rawX - lastX
+                        val dy = event.rawY - lastY
                         if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
                             isDragging = true
-                            params.x -= dx.toInt(); params.y -= dy.toInt()
-                            lastX = event.rawX; lastY = event.rawY
+                            params.x -= dx.toInt()
+                            params.y -= dy.toInt()
+                            lastX = event.rawX
+                            lastY = event.rawY
                             wm.updateViewLayout(this, params)
                         }
                         true
@@ -121,7 +124,9 @@ class FloatingIconService : Service() {
 
     private fun removeFloat() {
         floatView?.let {
-            (getSystemService(WINDOW_SERVICE) as? WindowManager)?.removeView(it)
+            try {
+                (getSystemService(WINDOW_SERVICE) as? WindowManager)?.removeView(it)
+            } catch (_: Exception) {}
             floatView = null
         }
     }

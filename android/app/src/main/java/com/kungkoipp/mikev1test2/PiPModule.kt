@@ -1,8 +1,6 @@
 package com.kungkoipp.mikev1test2
 
-import android.app.PictureInPictureParams
 import android.os.Build
-import android.util.Rational
 import com.facebook.react.bridge.*
 
 class PiPModule(private val ctx: ReactApplicationContext) : ReactContextBaseJavaModule(ctx) {
@@ -17,13 +15,10 @@ class PiPModule(private val ctx: ReactApplicationContext) : ReactContextBaseJava
             return
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            promise.resolve(false) // ไม่รองรับ Android < 8
+            promise.resolve(false)
             return
         }
         try {
-            val params = PictureInPictureParams.Builder()
-                .setAspectRatio(Rational(1, 1))
-                .build()
             activity.runOnUiThread {
                 (activity as? MainActivity)?.enterPiP()
                 promise.resolve(true)

@@ -34,8 +34,12 @@ class VoiceServiceModule(private val ctx: ReactApplicationContext)
     @ReactMethod
     fun stop(promise: Promise) {
         try {
-            ctx.startService(Intent(ctx, VoiceService::class.java).apply { action = VoiceService.ACTION_STOP })
-            ctx.startService(Intent(ctx, FloatingIconService::class.java).apply { action = FloatingIconService.ACTION_STOP })
+            ctx.startService(Intent(ctx, VoiceService::class.java).apply {
+                action = VoiceService.ACTION_STOP
+            })
+            ctx.startService(Intent(ctx, FloatingIconService::class.java).apply {
+                action = FloatingIconService.ACTION_STOP
+            })
             promise.resolve(true)
         } catch (e: Exception) { promise.reject("ERR_STOP", e.message) }
     }
@@ -58,7 +62,6 @@ class VoiceServiceModule(private val ctx: ReactApplicationContext)
     @ReactMethod
     fun hasOverlayPermission(promise: Promise) = promise.resolve(hasOverlayPermission())
 
-    // ── ขอยกเว้น battery optimization — สำคัญมากให้รัน background ได้ ────────
     @ReactMethod
     fun requestBatteryOptimizationExemption(promise: Promise) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) { promise.resolve(true); return }

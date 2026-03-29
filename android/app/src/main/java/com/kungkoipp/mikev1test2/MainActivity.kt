@@ -25,17 +25,29 @@ class MainActivity : ReactActivity() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       setPictureInPictureParams(
         PictureInPictureParams.Builder()
-          .setAspectRatio(Rational(1, 1))   // ไอคอนสี่เหลี่ยมจัตุรัส
-          .setAutoEnterEnabled(true)         // ← กด Home → เข้า PiP อัตโนมัติ
+          .setAspectRatio(Rational(16, 9))
+          .setAutoEnterEnabled(true)
           .build()
       )
     }
   }
 
+  // ← method นี้ถูกเรียกจาก PiPModule
+  fun enterPiP() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+    if (isInPictureInPictureMode) return
+    try {
+      val params = PictureInPictureParams.Builder()
+        .setAspectRatio(Rational(16, 9))
+        .build()
+      enterPictureInPictureMode(params)
+    } catch (_: Exception) {}
+  }
+
   // กด Home / ย่อแอป → เข้า PiP (Android 8+)
   override fun onUserLeaveHint() {
     super.onUserLeaveHint()
-    enterPipIfActive()
+    enterPiP()
   }
 
   override fun onPictureInPictureModeChanged(
@@ -43,21 +55,6 @@ class MainActivity : ReactActivity() {
     newConfig: Configuration
   ) {
     super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-    // JS จะรับ AppState change ได้ปกติ
-  }
-
-  private fun enterPipIfActive() {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-    if (isInPictureInPictureMode) return
-
-    try {
-      val params = PictureInPictureParams.Builder()
-        .setAspectRatio(Rational(1, 1))
-        .build()
-      enterPictureInPictureMode(params)
-    } catch (_: Exception) {
-      // มือถือบางรุ่นไม่รองรับ PiP — ไม่ทำอะไร
-    }
   }
 
   override fun getMainComponentName(): String = "main"

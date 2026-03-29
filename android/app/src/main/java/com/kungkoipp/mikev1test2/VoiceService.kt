@@ -10,9 +10,9 @@ import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class VoiceService : Service() {
 
@@ -27,7 +27,6 @@ class VoiceService : Service() {
     }
 
     private val scope    = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val http     = OkHttpClient()
     private var wakeLock: PowerManager.WakeLock? = null
     private var audioFocusRequest: AudioFocusRequest? = null
     private var username = ""
@@ -43,7 +42,7 @@ class VoiceService : Service() {
                 username  = intent.getStringExtra(EXTRA_USERNAME) ?: ""
                 isRunning = true
                 acquireWakeLock()
-                requestAudioFocus()   // ← ขอ audio focus จาก Android
+                requestAudioFocus()
                 startForeground(NOTIF_ID, buildNotification("🎙 ระบบเสียงกำลังทำงาน..."))
                 startPollingLoop()
             }
@@ -74,7 +73,6 @@ class VoiceService : Service() {
                 AudioManager.AUDIOFOCUS_GAIN
             )
         }
-        // บังคับเส้นทางเสียงไป speaker/earpiece ตลอด
         am.mode = AudioManager.MODE_IN_COMMUNICATION
         am.isSpeakerphoneOn = true
     }
@@ -93,19 +91,22 @@ class VoiceService : Service() {
                         FloatingIconService.updateColor(statusColor)
                     }
                 } catch (_: Exception) {}
-                delay(1000L)
+                delay(3000L) // poll ทุก 3 วิ แทน 1 วิ ประหยัด battery
             }
         }
     }
 
     private fun fetchMicData(tag: String): JSONObject? {
         if (tag.isBlank()) return null
-        val body = http.newCall(
-            Request.Builder()
-                .url("https://api-mike-v2.runaesike.com/mic-data/$tag")
-                .build()
-        ).execute().use { it.body?.string() }
-        return if (body != null) JSONObject(body) else null
+        return try {
+            val conn = URL("https://api-mike-v2.runaesike.com/mic-data/$tag")
+                .openConnection() as HttpURLConnection
+            conn.connectTimeout = 5000
+            conn.readTimeout = 5000
+            val body = conn.inputStream.bufferedReader().readText()
+            conn.disconnect()
+            JSONObject(body)
+        } catch (_: Exception) { null }
     }
 
     private fun shutdown() {
@@ -114,7 +115,6 @@ class VoiceService : Service() {
         scope.cancel()
         wakeLock?.release()
         wakeLock = null
-        // คืน audio focus
         val am = getSystemService(AUDIO_SERVICE) as AudioManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             audioFocusRequest?.let { am.abandonAudioFocusRequest(it) }
@@ -124,6 +124,7 @@ class VoiceService : Service() {
         }
         am.mode = AudioManager.MODE_NORMAL
         FloatingIconService.updateColor("red")
+        @Suppress("DEPRECATION")
         stopForeground(true)
         stopSelf()
     }
@@ -135,7 +136,7 @@ class VoiceService : Service() {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
-            "mikev1:VoiceLock"
+            "mikev1test2:VoiceLock"
         ).also { it.acquire(4 * 60 * 60 * 1000L) }
     }
 

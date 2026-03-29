@@ -1,4 +1,5 @@
 package com.kungkoipp.mikev1test2
+
 import android.app.Application
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
@@ -19,7 +20,6 @@ class MainApplication : Application(), ReactApplication {
 
       override fun getPackages(): List<ReactPackage> =
         PackageList(this).packages.apply {
-          // ✅ Register native modules ที่เขียนเอง
           add(VoiceServicePackage())
           add(PiPPackage())
         }
